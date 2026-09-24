@@ -1,8 +1,7 @@
 """Pattern detector entry points.
 
-The implementation is deliberately deterministic. The module re-exports the
-scorer from the parent package; the previous version imported a non-existent
-agent.patterns.scorer module, which caused `import agent.patterns` to fail.
+The scorer lives in ``agent.scorer``; this relative import keeps the package
+importable when the runner is started from the repository root.
 """
 from ..scorer import score_case
 
