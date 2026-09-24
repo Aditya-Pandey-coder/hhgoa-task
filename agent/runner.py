@@ -9,6 +9,12 @@ from .patterns import detect
 from .policy_engine import recommend
 
 
+UNDOCUMENTED_PATTERN_DESCRIPTION = (
+    "Coordinated activity linked by a shared device profile across multiple cards; "
+    "the linkage was found by local device-neighbor expansion."
+)
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -21,11 +27,7 @@ def run_case(row: dict, graph: LocalGraph, mode: str = "batch"):
     result = detect(graph, flagged)
     affected = episode(graph, flagged, result["verdict"] == "fraud")
     exposure = exposure_usd(graph, affected)
-    connected_cards = (
-        graph.device_neighbors(flagged.device_id)
-        if flagged.device_id
-        else []
-    )
+    connected_cards = graph.device_neighbors(flagged.device_id) if flagged.device_id else []
     shared = len(connected_cards) > 1
     state = {
         **result,
@@ -59,10 +61,13 @@ def run_case(row: dict, graph: LocalGraph, mode: str = "batch"):
         else "escalated" if any(a["action"] == "ESCALATE_TO_ANALYST" for a in final_actions)
         else "open"
     )
-    timestamps = sorted(
-        graph.by_id[txn_id].ts.date().isoformat() for txn_id in affected
-    )
+    timestamps = sorted(graph.by_id[txn_id].ts.date().isoformat() for txn_id in affected)
     sar_file = any(a["action"] == "FILE_REPORT" for a in final_actions)
+    pattern_description = (
+        UNDOCUMENTED_PATTERN_DESCRIPTION
+        if result["pattern"] == "undocumented"
+        else ""
+    )
 
     sar = {
         "file": sar_file,
@@ -101,7 +106,7 @@ def run_case(row: dict, graph: LocalGraph, mode: str = "batch"):
             "verdict": result["verdict"],
             "fraud_probability": round(result["probability"], 4),
             "pattern": result["pattern"],
-            "pattern_description": "",
+            "pattern_description": pattern_description,
             "affected_txn_ids": affected,
             "first_suspicious_txn_id": affected[0] if affected else "",
             "connected_card_ids": [c for c in connected_cards if c != flagged.card_id],
