@@ -8,3 +8,5 @@ cases/
 out/
 demo_cases/
 demo_out/
+
+data/transactions.csv
